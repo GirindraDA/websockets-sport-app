@@ -8,7 +8,7 @@ function sendJson(socket, payload){
 
 function broadcast(wss, payload){
     for(const client of wss.clients){
-        if(client.readyState !== WebSocket.OPEN) return;
+        if(client.readyState !== WebSocket.OPEN) continue;
         
         client.send(JSON.stringify(payload));
     }
@@ -22,6 +22,11 @@ export function attachWebSocketServer(server){
     });
 
     wss.on("connection", (socket) => {
+        socket.isAlive = true;
+        socket.on("pong", () => {
+            socket.isAlive = true;
+        });
+
         sendJson(socket, { type: "welcome" });
 
         socket.on("error", (err) => {
@@ -29,8 +34,23 @@ export function attachWebSocketServer(server){
         });
     });
 
+    const interval = setInterval(() => {
+        wss.clients.forEach((socket) => {
+            if (socket.isAlive === false) {
+                return socket.terminate();
+            }
+
+            socket.isAlive = false;
+            socket.ping();
+        });
+    }, 30000);
+
+    wss.on("close", () => {
+        clearInterval(interval);
+    });
+
     function broadcastMatchCreated(match){
-        broadcast(wss, { type: "match_created", match });
+        broadcast(wss, { type: "match_created", data: match });
     }
 
     return { broadcastMatchCreated };
