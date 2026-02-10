@@ -3,6 +3,7 @@ import { matchesRouter } from './routes/matches.js';
 import http from 'http';
 import dotenv from 'dotenv';
 import { attachWebSocketServer } from './ws/server.js';
+import { securityMiddleware } from './arcjet.js';
 
 dotenv.config();
 
@@ -17,6 +18,9 @@ app.use(express.json());
 app.get('/', (req, res) => {
   res.send('Hello, World!');
 });
+
+// Apply security middleware arcjet
+app.use(securityMiddleware())
 
 app.use('/matches', matchesRouter);
 
